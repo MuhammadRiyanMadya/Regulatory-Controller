@@ -1,0 +1,56 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+
+
+
+def level_dynamic(h,t,OP):
+    A = 2
+    Rv = 0.5
+    dhdt = (1/Rv*OP - h)/(A/Rv)
+    return dhdt
+
+number_element = 40
+t = np.linspace(0,number_element-1,number_element)
+delta_t = t[1]-t[0]
+
+
+def level_controller():
+    PV0 = 24
+    OP0 = 30
+    Kc = 2
+    SP = np.ones(number_element)*20
+    PV = np.empty(number_element)
+    OP = np.empty(number_element)
+    OP[0] = OP0 #make it bumpless
+    PV[0] = PV0 #make it bumpless
+    
+    error = np.empty(number_element)
+    error[0] = SP[0] - PV[0] 
+    
+    for i in range(1,len(t)):
+        error[i-1] = SP[i-1] - PV[i-1]
+        OP[i] = OP0 + Kc*error[i-1] #Reverse control mechanism
+        if i >= 2:
+            I = Kc/Tc*(error[i-1]+error[i])
+        tspan = [delta_t*t[i-1],delta_t*t[i]]
+        y = odeint(level_dynamic,PV[i-1],tspan,args=(OP[i],))
+        PV[i] = y[-1]
+        
+    return PV, OP, SP
+(PV,OP,SP) = level_controller()
+
+plt.figure(1)
+plt.subplot(2,1,1)
+plt.plot(t,PV,'k-',linewidth=2,label='level(t)')
+plt.plot(t,SP,'b',label='Setpoint')
+plt.xlabel('time,minutes')
+plt.ylabel('level, meters')
+plt.xlim(0,25)
+plt.legend()
+plt.subplot(2,1,2)
+plt.plot(t,OP,'r-',linewidth=2,label='opening(t)')
+plt.xlabel('time,minutes')
+plt.ylabel('opening, %')
+plt.xlim(0,25)
+plt.legend()
