@@ -76,10 +76,47 @@ x0 = [1,5,15]
 
 yt = foptd_solver(x0)
 
+#plt.figure(1)
+#plt.subplot(2,1,1)
+#plt.plot(t,vt,'b',linewidth = 2,label='Velocity(t)')
+#plt.plot(t,yt,'r--',linewidth = 2,label='Foptd(t)')
+#plt.ylabel('Velocity, m/s')
+#plt.xlabel('Time, second')
+#plt.legend()
+#plt.subplot(2,1,2)
+#plt.plot(t,u,'k--',linewidth = 2,label='% pedal')
+#plt.ylabel('% Pedal')
+#plt.xlabel('Time, second')
+#plt.legend()
+
+#3 FITTING OPTIMIZATION-GETTING USEFUL PARAMETERS FOR REGULATORY CONTROLLER
+def objective(x):
+    yt = foptd_solver(x)
+    SSE = 0
+    for i in range(num_index):
+        SSE = SSE + (vt[i] - yt[i])**2
+    return SSE
+
+x0 = [1,5,0]
+SSE = objective(x0)
+print('SSE Initial Value = ' + str(SSE))
+
+solution = minimize(objective,x0)
+x = solution.x
+yt = foptd_solver(x)
+SSE = objective(x)
+
+print('SSE Final Value = ' + str(SSE))
+print('Kp Predicted = ' + str(x[0]))
+print('taup  Predicted = ' + str(x[1]))
+print('thetap Predicted = ' + str(x[2]))
+
+
 plt.figure(1)
 plt.subplot(2,1,1)
-plt.plot(t,vt,'b',linewidth = 2,label='Velocity(t)')
-plt.plot(t,yt,'r--',linewidth = 2,label='Foptd(t)')
+plt.plot(t,vt,'b',linewidth = 3,label='Velocity(t)')
+plt.plot(t,yt,'m--',linewidth = 1.5,label='Foptd Optimized Value (t)')
+plt.plot(t,foptd_solver(x0),'y-.',linewidth = 1.5,label='Foptd Initial Value (t)')
 plt.ylabel('Velocity, m/s')
 plt.xlabel('Time, second')
 plt.legend()
@@ -88,9 +125,6 @@ plt.plot(t,u,'k--',linewidth = 2,label='% pedal')
 plt.ylabel('% Pedal')
 plt.xlabel('Time, second')
 plt.legend()
-
-
-#3 FITTING OPTIMIZATION-GETTING USEFUL PARAMETERS FOR REGULATORY CONTROLLER
 
 
  
