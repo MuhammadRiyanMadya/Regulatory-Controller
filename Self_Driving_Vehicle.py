@@ -155,4 +155,58 @@ def regulatory_controller(Kc,Tc)
         process_val[num_index-1] = process_val[num_index-2]
     return process_val, setpoint
 
+#4 PROCESS CONTROL-VELOCITY REGULATORY CONTROLLER
+#value from final foptd parameters which are Kp, taup, thetap used to get
+#best controller parameters including controller gain, reset time, and derivative value (PID)
+
+def regulatory_controller(Kc,Tc):
+    #value storage
+    process_val = np.empty(num_index)
+    process_val[0] = vt[0]
+    process_set = np.empty(num_index)
+    process_set[0:50] = 20
+    process_set[50:120] = 100
+    process_set[120:200] = 25
+    OP = np.empty(num_index)
+    OP[0] = u[0]
+    error = np.empty(num_index)
+    I = np.empty(num_index)
+    for i in range(0,num_index-1):
+        error[i] = process_set[i] - process_val[i]
+        if i >= 1:
+            I[i] = I[i-1] + error[i]*delta_t
+            OP[i] = OP[0] + Kc*error[i] + Kc/Tc*I[i]
+        else:
+            OP[i] = OP[0] + Kc*error[i]
+        tstep = [t[i],t[i+1]]
+        process_val_tre = odeint(momentum_balance,process_val[i],tstep,args=(OP[i],))
+        process_val[i+1] = process_val_tre[-1]
+        OP[num_index-1] = OP[num_index-2]
+        error[num_index-1] = error[num_index-2]
+        I[num_index-1] = I[num_index-2]
+        
+    return process_val, process_set, OP
+
+#Define Tc and Kc based on Kp, taup and thetap value
+#For instance, Kc = 1/Kp and Tc = taup, while for time delay, I did not yet use it
+
+(PV0, SP, OP0) = regulatory_controller(1/x0[0],x0[1]/2)
+(PV, SP, OP) = regulatory_controller(1/x[0],x[1]/4)
+
+plt.figure(2)
+plt.subplot(2,1,1)
+plt.plot(t,SP,'k--',linewidth = 1.5,label='Setpoint (t)')
+plt.plot(t,PV0,'y--',linewidth = 2,label='Init ctrl (t)')
+plt.plot(t,PV,'m--',linewidth = 3,label='Opt ctrl (t)')
+plt.ylabel('Velocity, m/s')
+plt.xlabel('Time, second')
+plt.legend(loc='best')
+plt.subplot(2,1,2)
+plt.plot(t,OP0,'k--',linewidth = 1.5,label='% Pedal Init')
+plt.plot(t,OP,'b:',linewidth = 2,label='% Pedal Opt')
+plt.ylabel('% Pedal')
+plt.xlabel('Time, second')
+plt.legend(loc='best')
+
+
     
