@@ -11,6 +11,7 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize
 
 num_index = 200
 t = np.linspace(0,num_index-1,num_index)
@@ -125,35 +126,6 @@ plt.plot(t,u,'k--',linewidth = 2,label='Pedal Step Test')
 plt.ylabel('% Pedal')
 plt.xlabel('Time, second')
 plt.legend()
-
-#4 PROCESS CONTROL-VELOCITY REGULATORY CONTROLLER
-#value from final foptd parameters which are Kp, taup, thetap used to get
-#best controller parameters including controller gain, reset time, and derivative value (PID)
-
-def regulatory_controller(Kc,Tc)
-    #value storage
-    process_val = np.empty(num_index)
-    process_val[0] = vt[0]
-    process_set = np.empty(num_index)
-    process_set[0:25] = 20
-    process_set[70:120] = 100
-    process_set[120:160] = 25
-    OP = np.empty(num_index)
-    OP[0] = u[0]
-    error = np.empty(num_index)
-    I = np.empty(num_index)
-    for i in range(0,num_index-1):
-        error[i] = process_set[i] - process_val[i]
-        if i > 1:
-            I[i] = I[i-1] + error[i]*delta_t
-            OP[i] = OP[0] + Kc*error[i] + Kc/Tc*I[i]
-        else:
-            OP[i] = OP[0] + Kc*error[i]
-        tstep = [t[i],t[i+1]]
-        process_val = odeint(momentum_balance,process_val[i],tstep,args=(OP[i],Kc,Tc))
-        process_val[i+1] = process_val[-1]
-        process_val[num_index-1] = process_val[num_index-2]
-    return process_val, setpoint
 
 #4 PROCESS CONTROL-VELOCITY REGULATORY CONTROLLER
 #value from final foptd parameters which are Kp, taup, thetap used to get
