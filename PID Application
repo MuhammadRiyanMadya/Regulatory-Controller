@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 11 20:14:02 2023
+
+@author: mrm
+"""
+
+
+class model(object):
+    """
+    System parameter
+    ---------------
+    system must be in the form of 'first order plus time delay or FOPTD'
+    Kp      : process gain
+    taup    : process time
+    thetap  : process time delay
+    
+    """
+    Kp = 2
+    taup = 200
+    thetap = 0
+class pid(object):
+    """
+    Controller Input
+    ----------------
+    Kc = controller gain
+    tauI = integral time
+    tauD = derivative timw
+    sp = setpoint
+    op_hi = anti-reset windup high limit
+    op_lo = anti-reset windup low limit
+
+    """
+    Kc = 2
+    tauI = 10
+    tauD = 0
+    sp = []
+    op_hi = 100
+    op_lo = 20
+    
+def process(y,t,u,Kp,taup):
+    dydt = -y/taup + Kp/taup*u
+    return dydt
+def calc_response(t,mode,xm,xc):
+    """
+    Parameters
+    ----------
+    t    : refer to the time duration input
+    mode : auto or manual controller mode, auto = 1, manual = 0
+    xm   : refer to the class of model system constants Kp, taup, thetap
+    xc   : refer to the class of pid controller constants Kc, tauI, tauD
+    
+    """
+    Kp = xm.Kp
+    taup = xm.taup
+    thetap = xm.thetap
+    
+    Kc = xc.Kc
+    tauI = xc.tauI
+    tauD = xc.tauD
+    op_hi = xc.op_hi
+    op_lo = xc.op_lo
+    
+    delta_t = t[1] - t[0]
+    
+    if mode == 0:
+        op[100] = 2
+        
+    for i in range(0,ns):
+        # PID engine
+        error[i] = sp[i] - pv[i]
+        if i >= 1:
+            dpv = (pv[i] - pv[i-1])/delta_t
+            ioe[i] = ioe[i-1] + error[i]*delta_t
+        P[i] = Kc*error[i]
+        I[i] = Kc/tauI*ioe[i]
+        D[i] = Kc/tauD*dpv[i]
+        # Apply PID engine output onlye when mode is auto
+        if mode == 1:
+            op[i] = op[0] + P[i] + I[i] + D[i]
+        # Equip auto mode with anti-reset windup to prevent error accumulation
+        if OP[i] > 100:
+            op[i] = op_hi
+            ioe[i] = ioe[i-1] - error[i]*delta_t
+        if op[i] < 0:
+            op[i] = op_lo
+            ioe[i] = ioe[i-1] - error[i]*delta_t
+        # simulate system with time delay as long as thetap
+        
