@@ -117,6 +117,16 @@ def calc_response(t,mode,xm,xc):
         iop = max(0,i-ndelay)
         y = odeint(process, pv[i], delta_t, args=(op[iop],Kp,taup))
         pv[i+1] = y[-1]
+        error[num_index] = np.empty[num_index-1] 
+        ie[num_index] = np.empty[num_index-1]
+        dpv[num_index] = np.empty[num_index-1]
+        P[num_index] = np.empty[num_index-1]
+        I[num_index] = np.empty[num_index-1]
+        D[num_index] = np.empty[num_index-1]
+        op[num_index] = np.empty[num_index-1]
+    return SP,PV,OP
+
+# plotting function
         
         
         
