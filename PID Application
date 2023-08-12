@@ -4,6 +4,8 @@ Created on Fri Aug 11 20:14:02 2023
 
 @author: mrm
 """
+import numpy as np
+from scipy.integrate import odeint
 
 
 class model(object):
@@ -19,6 +21,7 @@ class model(object):
     Kp = 2
     taup = 200
     thetap = 0
+    init_val = 0
 class pid(object):
     """
     Controller Input
@@ -54,6 +57,7 @@ def calc_response(t,mode,xm,xc):
     Kp = xm.Kp
     taup = xm.taup
     thetap = xm.thetap
+    init_val = xm.init_val
     
     Kc = xc.Kc
     tauI = xc.tauI
@@ -62,11 +66,22 @@ def calc_response(t,mode,xm,xc):
     op_lo = xc.op_lo
     
     delta_t = t[1] - t[0]
-    
+
+    pv = np.empty(num_index)
+    pv[0] = init_val
+    sp = np.empty(num_index)
+    error = np.empty(num_index) 
+    ie = np.empty(num_index)
+    dpv = np.empty(num_index)
+    P = np.empty(num_index)
+    I = np.empty(num_index)
+    D = np.empty(num_index)
+    op = np.empty(num_index)
+
     if mode == 0:
         op[100] = 2
         
-    for i in range(0,ns):
+    for i in range(0,num_index):
         # PID engine
         error[i] = sp[i] - pv[i]
         if i >= 1:
@@ -79,7 +94,7 @@ def calc_response(t,mode,xm,xc):
         if mode == 1:
             op[i] = op[0] + P[i] + I[i] + D[i]
         # Equip auto mode with anti-reset windup to prevent error accumulation
-        if OP[i] > 100:
+        if op[i] > 100:
             op[i] = op_hi
             ioe[i] = ioe[i-1] - error[i]*delta_t
         if op[i] < 0:
@@ -100,6 +115,9 @@ def calc_response(t,mode,xm,xc):
         # which is 12 seconds after the error sample send to the controller. Not quite accurate of actual representation.
         ndelay = np.ceil(thetap/delta_t)
         iop = max(0,i-ndelay)
-        y = odeint..............
+        y = odeint(process, pv[i], delta_t, args=(op[iop],Kp,taup))
+        pv[i+1] = y[-1]
+        
+        
         
         
