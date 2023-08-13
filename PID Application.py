@@ -106,28 +106,6 @@ def calc_response(t,mode,xm,xc):
         # linspace to step with evenly spaced from start time to end time 0 - 120-th seconds. Let's say
         # my total step is 150. Then interval between one step to another step is 120/150 which is 4/5 or
         # 0.8 second. Then, the order of the time delay in the indices is 2.32/0.8 ~ 2.9-th.
-        # So let's say 0, 0.8, 1.6, 2.4, 3.2. The exact time delay happens between 1.6 --> 2.4 or 2-th --> 3--th indices
-        # Using numpy.ceil that 2.9-th index will turn to the ceil of that scalar which is smallest integer i where i > 2.9 
-        # and it is 3.
-        # in some cases, the method will experience deviation from reality. Consider the case where i have simulation duration
-        # for 120 seconds, then i apply linspace of just 10 elements. Then the space between one step to the next step is 12 seconds
-        # . The order of the time delay will be 2.32/12 = 0.1934 and by numpy.ceil function the time delay index will be 1-st index
-        # which is 12 seconds after the error sample send to the controller. Not quite accurate of actual representation.
-        ndelay = np.ceil(thetap/delta_t)
-        iop = max(0,i-ndelay)
-        y = odeint(process, pv[i], delta_t, args=(op[iop],Kp,taup))
-        pv[i+1] = y[-1]
-        error[num_index] = np.empty[num_index-1] 
-        ie[num_index] = np.empty[num_index-1]
-        dpv[num_index] = np.empty[num_index-1]
-        P[num_index] = np.empty[num_index-1]
-        I[num_index] = np.empty[num_index-1]
-        D[num_index] = np.empty[num_index-1]
-        op[num_index] = np.empty[num_index-1]
-    return SP,PV,OP
 
-# plotting function
-        
-        
         
         
