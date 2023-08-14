@@ -156,6 +156,17 @@ mode = 1
 
 (pv,op) = calc_response(t,mode,model,pid)
 
-plt.plot(t,pv)
-plt.plot(t,sp)
-        
+# plotting
+plt.figure(1)
+plt.subplot(2,1,1)
+plt.title('PID Response')
+plt.plot(t,pv,'b',linewidth=2, label='PV')
+plt.plot(t,sp,'k--',linewidth=2, label='SP')
+plt.xlabel('Time')
+plt.ylabel('Response')
+plt.legend()
+plt.subplot(2,1,2)
+plt.plot(t,op,'r',linewidth=2, label='OP')
+plt.xlabel('Time')
+plt.ylabel('Response')
+plt.legend()
