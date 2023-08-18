@@ -50,6 +50,20 @@ m_in = np.empty(num_index)
 
 
 for i in range(0,num_index-1):
+    primaryerror[i] = primarySP[i] - primaryPV[i]
+    if i == 0
+    primaryOP[i] = OP0 - Kc*error[i]
+    if i >= 1
+        primaryioerror[i] = primaryioerror[i-1] + primaryerror[i]*delta_t
+        primarydpv[i] = (primaryerror[i] - primaryerror[i-1])/delta_t
+    P = Kc*error[i]
+    I = Kc/tauC*primaryioerror[i]
+    D = Kc/tauD*primarydpv[i]
+    
+    primaryOP[i] = 
+    
+
+
     
     m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
     
