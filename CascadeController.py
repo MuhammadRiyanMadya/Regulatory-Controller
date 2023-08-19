@@ -11,10 +11,7 @@ import matplotlib.pyplot as plt
 
 "Cascade controller for simple level controller of a liquid tank"
 
-# Tank level transient response model
-
-
-def LevelResponse(h,t,ValveLift,delP,FlowOut):
+def LevelResponse(level,time,ValveLift,delP,FlowOut,Cv = 1e-4,rho = 1000,sg = 1, A = 5):
     """
     h : liquid level height inside tank
     t : time
@@ -25,26 +22,51 @@ def LevelResponse(h,t,ValveLift,delP,FlowOut):
     
     FlowIn = rho*Cv*ValveLift*np.sqrt(delP/sg)
     FlowLeak = 5*h
-    if h <0:
-        dhdt = 0
+    if level <0:
+        dleveldt = 0
     else:
-        dhdt = (FlowIn - FlowOut - FlowLeak)/rho/A
+        dleveldt = (FlowIn - FlowOut - FlowLeak)/rho/A
     return dhdt
 
-Cv = 1e-4 #
-rho = 1000 #kg/m^3
-sg = 1 #dimensionless
-A = 5 #m^2
-
-
+# time basis
 num_index = 3001
 t = np.linspace(0,num_index-1,num_index)
 delta_t = t[1] - t[0]
 
+# initial condition
+primaryOP0 = 
+secondaryOP0 = 20
+
+
+primarySP = np.empty(num_index)
+secondarySP = np.empty(num_index)
+
 primaryPV = np.ones(num_index)
+secondaryPV = np.empty(num_index)
+
 
 secondaryOP = np.empty(num_index)
-secondaryOP[0:] = 20
+secondaryOP = np.empty(num_index)
+secondaryOP[0:] = secondaryOP0
+
+secondaryOP = np.empty(num_index)
+secondaryOP = np.empty(num_index)
+secondaryOP[0:] = secondaryOP0
+
+primaryerror = np.empty(num_index)
+primaryioerror = np.empty(num_index)
+primarydpv = np.empty(num_index)
+primaryP = np.empty(num_index)
+primaryI = np.empty(num_index)
+primaryD = np.empty(num_index)
+
+secondaryerror = np.empty(num_index)
+secondaryioerror = np.empty(num_index)
+secondarydpv = np.empty(num_index)
+secondaryP = np.empty(num_index)
+secondaryI = np.empty(num_index)
+secondaryD = np.empty(num_index)
+
 
 # Disturbance
 delP = np.empty(num_index)
@@ -55,7 +77,6 @@ delP[1000:] = 22
 m_out = np.empty(num_index)
 m_out[0:] = 2
 
-secondaryPV = np.empty(num_index)
 
 
 
@@ -67,11 +88,11 @@ for i in range(0,num_index-1):
     if i >= 1
         primaryioerror[i] = primaryioerror[i-1] + primaryerror[i]*delta_t
         primarydpv[i] = (primaryerror[i] - primaryerror[i-1])/delta_t
-    P[i] = Kc*error[i]
-    I[i] = Kc/tauC*primaryioerror[i]
-    D[i] = Kc/tauD*primarydpv[i]
+    primaryP[i] = Kc*error[i]
+    primaryI[i] = Kc/tauC*primaryioerror[i]
+    primaryD[i] = Kc/tauD*primarydpv[i]
     
-    primaryOP[i] = OP0 + P[i] + I[i] + D[i]
+    primaryOP[i] = primaryOP0 + Primary[i] + primaryI[i] + primaryD[i]
     if primaryOP[i] > 100:
         primaryOP[i] = 100
         primaryioerror[i] = primaryioerror[i-1] - primaryerror[i]*delta_t 
@@ -88,17 +109,17 @@ for i in range(0,num_index-1):
     PVEUHI = 
     PVEULO = 
     range = PVEUHI - PVEULO
-    SP[i] = primaryOP[i]*range
+    secondarySP[i] = primaryOP[i]*range
     #------------------------------------------------------------------------------------------#
     secondaryerror[i] = secondarySP[i] - secondaryPV[i]
     if i == 0
-    secondaryOP[i] = OP0 - Kc*secondaryerror[i]
+    secondaryOP[i] = secondaryOP0 - Kc*secondaryerror[i]
     if i >= 1
         secondaryioerror[i] = secondaryioeerror[i-1] + secondaryerror[i]*delta_t
         secondarydpv[i] = (secondaryerror[i] - secondaryerror[i-1])/delta_t
-    P[i] = Kc*secondaryerror[i]
-    I[i] = Kc/tauC*secondaryioerror[i]
-    D[i] = Kc/tauD*secondarydpv[i]
+    secondaruP[i] = Kc*secondaryerror[i]
+    secondaryI[i] = Kc/tauC*secondaryioerror[i]
+    secondaryD[i] = Kc/tauD*secondarydpv[i]
     
     secondaryOP[i] = OP0 + P[i] + I[i] + D[i]
     if secondaryOP[i] > 100:
