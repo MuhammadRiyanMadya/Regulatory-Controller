@@ -34,15 +34,16 @@ t = np.linspace(0,num_index-1,num_index)
 delta_t = t[1] - t[0]
 
 # initial condition
-primaryOP0 = 
-secondaryOP0 = 20
+primaryOP0 = 20
+secondaryOP0 = .. 
 
 
 primarySP = np.empty(num_index)
+primarySP[0:] = 1
 secondarySP = np.empty(num_index)
 
 primaryPV = np.ones(num_index)
-secondaryPV = np.empty(num_index)
+secondaryPV = np.ones(num_index)*7
 
 
 secondaryOP = np.empty(num_index)
@@ -106,8 +107,8 @@ for i in range(0,num_index-1):
     then this the setpoint would be primaryOP*(PVEUHI - PVEULO). This signal then send
     to slave controller"""
 
-    PVEUHI = 
-    PVEULO = 
+    PVEUHI = 34
+    PVEULO = 0
     range = PVEUHI - PVEULO
     secondarySP[i] = primaryOP[i]*range
     #------------------------------------------------------------------------------------------#
@@ -128,13 +129,13 @@ for i in range(0,num_index-1):
     else if primaryOP[i] < 0:
         secondaryOP[i] = 0
         secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
-
-    seondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
-
-    # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
     
+    # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
     # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
     # level[i+1] = h[-1]
+    
+    seondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
+
     h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],m_out[i]))
     primaryPV[i+1] = h[-1]
 #-----------------------------------------------------------------------------------------------#
