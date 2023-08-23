@@ -4,8 +4,8 @@ Regulatory Controller project embodies controller algorithm of conventional cont
 including Proportional, Integral, and Derivative (PID) Controller, Integrating vs Non-Integrating, 
 and Cascade Controller. This project supports further creation of high level control system in the 
 "Advanced Process Controller" repository.
-<p align="left">
-<img src=" "></p>
+<p align="center">
+<img src="https://github.com/MuhammadRiyanMadya/Regulatory_Controller/blob/main/responseselfdrive.png"></p>
 
 ## System
 <!-- ![alt text]() -->
