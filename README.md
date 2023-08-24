@@ -7,8 +7,11 @@ and Cascade Controller. This project supports further creation of high level con
 <p align="center">
 <img src="https://github.com/MuhammadRiyanMadya/Regulatory_Controller/blob/main/responseselfdrive.png"></p>
 
-## System
+## System's Response Identification - Modelling
+### First Principle
 <!-- ![alt text]() -->
 <p align="center">
-<img src="">
+<img src="https://github.com/MuhammadRiyanMadya/Regulatory_Controller/blob/main/responseselfdrive.png">
 </p>
+
+### Machine Learning
