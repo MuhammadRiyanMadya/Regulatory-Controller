@@ -1,0 +1,190 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug 16 10:38:25 2023
+
+@author: M.R.M
+"""
+
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+#Cascade controller for level controller of a liquid tank
+
+
+
+def LevelResponse(level,time,ValveLift,delP,FlowOut,Physical_Parameter):
+    
+    """
+    level : level of the liquid inside the tank
+    time : time, hour
+    ValveLift : Percent opening of inlet valve, 0 - 100 %
+    delP : pressure difference in the input flow as disturbance variation
+    FlowOut : As disturbance also but for this case, it's constant
+    """
+    rho = Physical_Parameter.rho
+    Cv = Physical_Parameter.Cv
+    sg = Physical_Parameter.sg
+    A = Physical_Parameter.A
+    
+    FlowIn = rho*Cv*ValveLift*np.sqrt(delP/sg)
+    FlowLeak = 5*level
+    if level <0:
+        dleveldt = 0
+    else:
+        dleveldt = (FlowIn - FlowOut - FlowLeak)/rho/A
+    return dleveldt
+
+# time basis
+num_index = 3001
+t = np.linspace(0,num_index-1,num_index)
+delta_t = t[1] - t[0]
+
+
+#-------------------------------------Controller Engine----------------------------------------#
+
+def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
+    
+    
+    rho = Physical_Parameter.rho
+    Cv = Physical_Parameter.Cv
+    sg = Physical_Parameter.sg
+    
+
+    
+    # initial condition
+    primaryOP0 = 20
+    secondaryOP0 = 7
+    
+    
+    primarySP = np.empty(num_index)     
+    primarySP[0:] = 1                   #At time = 0, tank level setpoint & process variable equal to 1 meter
+    secondarySP = np.empty(num_index)   #At time = 0, input flow setpoint equal to 7
+    primarySP[0:] = 7
+    primaryPV = np.ones(num_index)*1      #At time = 0, tank level setpoint & process variable equal to 1 meter
+    secondaryPV = np.ones(num_index)*7  #At time = 0, input flow equals to 7
+    
+    
+    primaryOP = np.empty(num_index)
+    primaryOP[0:] = primaryOP0
+    
+    secondaryOP = np.empty(num_index)
+    secondaryOP[0:] = secondaryOP0
+    
+    primaryerror = np.empty(num_index)
+    primaryioerror = np.empty(num_index)
+    primarydpv = np.empty(num_index)
+    primaryP = np.empty(num_index)
+    primaryI = np.empty(num_index)
+    primaryD = np.empty(num_index)
+    
+    secondaryerror = np.empty(num_index)
+    secondaryioerror = np.empty(num_index)
+    secondarydpv = np.empty(num_index)
+    secondaryP = np.empty(num_index)
+    secondaryI = np.empty(num_index)
+    secondaryD = np.empty(num_index)
+    
+    
+    # Disturbance
+    delP = np.empty(num_index)
+    delP[0:1000] = 12
+    delP[1000:] = 22
+    
+    # Constant
+    FlowOut = np.empty(num_index)
+    FlowOut[0:] = 2    
+    
+    
+    
+#-------------------------------------Primary Controller---------------------------------------#
+    Kc_1 = PrimaryTuning.Kc
+    tauC_1 = PrimaryTuning.tauC
+    tauD_1 = PrimaryTuning.tauD
+    
+    for i in range(0,num_index-1):
+        primaryerror[i] = primarySP[i] - primaryPV[i]
+        if i >= 1:
+            primaryioerror[i] = primaryioerror[i-1] + primaryerror[i]*delta_t
+            primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
+        primaryP[i] = Kc_1*primaryerror[i]
+        primaryI[i] = Kc_1/tauC_1*primaryioerror[i]
+        primaryD[i] = Kc_1/tauD_1*primarydpv[i]
+        
+        primaryOP[i] = primaryOP0 + primaryP[i] + primaryI[i] + primaryD[i]
+        
+        if primaryOP[i] > 100:
+            primaryOP[i] = 100
+            primaryioerror[i] = primaryioerror[i-1] - primaryerror[i]*delta_t 
+        elif primaryOP[i] < 0:
+            primaryOP[i] = 0
+            primaryioerror[i] = primaryioerror[i-1] + primaryerror[i]*delta_t
+            
+        #--------------------------Transfer To Secondary Controller----------------------------------#
+        """ I've got the master output which then send to the slave controller its setpoint
+        The output ranges from 0 - 100 %, then i need to convert this value to appropriate
+        setpoint of slave controller. Let's say maximum flow is ... and highest flow is ...
+        then this the setpoint would be primaryOP*(PVEUHI - PVEULO). This signal then send
+        to slave controller"""
+    
+        PVEUHI = 35
+        PVEULO = 0
+        VariableSpan = PVEUHI - PVEULO
+        secondarySP[i] = primaryOP[i]/100*VariableSpan
+        
+        #-------------------------------Secondary Controller----------------------------------------#
+        Kc_2 = SecondaryTuning.Kc
+        tauC_2 = SecondaryTuning.tauC
+        tauD_2 = SecondaryTuning.tauD
+        
+        secondaryerror[i] = secondarySP[i] - secondaryPV[i]
+        if i >= 1:
+            secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
+            secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
+        secondaryP[i] = Kc_2*secondaryerror[i]
+        secondaryI[i] = Kc_2/tauC_2*secondaryioerror[i]
+        secondaryD[i] = Kc_2/tauD_2*secondarydpv[i]
+        
+        secondaryOP[i] = secondaryOP0 + secondaryP[i] + secondaryI[i] + secondaryD[i]
+        
+        if secondaryOP[i] > 100:
+            secondaryOP[i] = 100
+            secondaryioerror[i] = secondaryioerror[i-1] - secondaryerror[i]*delta_t 
+        elif secondaryOP[i] < 0:
+            secondaryOP[i] = 0
+            secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
+        
+        # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
+        # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
+        # level[i+1] = h[-1]
+        
+        secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
+    
+        h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i],Physical_Parameter))
+        primaryPV[i+1] = h[-1]
+    #-----------------------------------------------------------------------------------------------#
+    
+    secondaryPV[num_index-1] = secondaryPV[num_index-2]
+
+"""
+plt.figure()
+plt.subplot(4,1,1)
+plt.plot(t,level,'b-',linewidth=3,label='level')
+plt.ylabel('Tank Level')
+plt.legend(loc='best')
+plt.subplot(4,1,2)
+plt.plot(t,op,'r--',linewidth=3,label='valve')
+plt.ylabel('Valve')    
+plt.legend(loc=1)
+plt.subplot(4,1,3)
+plt.plot(t,m_out,'b--',linewidth=3,label='Outlet Flow (kg/sec)')
+plt.plot(t,delP,'r:',linewidth=3,label='Inlet Pressure (bar)')
+plt.ylabel('Disturbances')    
+plt.legend(loc=1)
+plt.subplot(4,1,4)
+plt.plot(t,m_in,'k:',linewidth=3,label='Inlet Flow (kg/sec)')
+plt.xlabel('Time (sec)')
+plt.legend(loc=1)
+
+plt.show()
+"""
