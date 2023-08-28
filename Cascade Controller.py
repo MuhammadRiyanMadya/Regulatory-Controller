@@ -35,60 +35,53 @@ def LevelResponse(level,time,ValveLift,delP,FlowOut,Physical_Parameter):
         dleveldt = (FlowIn - FlowOut - FlowLeak)/rho/A
     return dleveldt
 
+#-------------------------------------Controller Engine----------------------------------------#
 # time basis
 num_index = 3001
 t = np.linspace(0,num_index-1,num_index)
 delta_t = t[1] - t[0]
+rho = Physical_Parameter.rho
+Cv = Physical_Parameter.Cv
+sg = Physical_Parameter.sg
+Kc_1 = PrimaryTuning.Kc
+tauC_1 = PrimaryTuning.tauC
+tauD_1 = PrimaryTuning.tauD
+Kc_2 = SecondaryTuning.Kc
+tauC_2 = SecondaryTuning.tauC
+tauD_2 = SecondaryTuning.tauD
 
+# storage
+secondaryPV = np.empty(num_index)
+secondaryOP = np.empty(num_index)
+secondaryOP[0] = 30
 
-#-------------------------------------Controller Engine----------------------------------------#
-
-def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
-    rho = Physical_Parameter.rho
-    Cv = Physical_Parameter.Cv
-    sg = Physical_Parameter.sg
-    Kc_1 = PrimaryTuning.Kc
-    tauC_1 = PrimaryTuning.tauC
-    tauD_1 = PrimaryTuning.tauD
-    Kc_2 = SecondaryTuning.Kc
-    tauC_2 = SecondaryTuning.tauC
-    tauD_2 = SecondaryTuning.tauD
-
-    # storage
-    secondaryPV = np.empty(num_index)
-    secondaryOP = np.empty(num_index)
-    secondaryOP[0] = 30
-
-    primaryOP = np.zeros(num_index)
-    delP = np.empty(num_index)
-    FlowOut = np.empty(num_index)
+primaryOP = np.zeros(num_index)
+delP = np.empty(num_index)
+FlowOut = np.empty(num_index)
     
-    
-    
-    for i in range(0,num_index-1):
-        # primary/master controller
-        # Apply disturbance to the system
-        delP[i] = 12
-        FlowOut[i] = 2
-        secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
-        primaryerror = primarySP - primaryPV
-        # if i >= 1:
+for i in range(0,num_index-1):
+    # primary/master controller
+    # Apply disturbance to the system
+    delP[i] = 12
+    FlowOut[i] = 2
+    secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
+    primaryerror = primarySP - primaryPV
+    # if i >= 1:
+    primaryioerror = primaryioerror + primaryerror*delta_t
+    # primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
+    primaryP = Kc_1*primaryerror
+    primaryI = Kc_1/tauC_1*primaryioerror
+    # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
+    primaryOP[i] = primaryOP0 + primaryP + primaryI # + primaryD[i]
+    # Anti-reset windup protection
+    if primaryOP[i] > 40:
+        primaryOP[i] = 40
+        primaryioerror = primaryioerror - primaryerror*delta_t 
+    elif primaryOP[i] < 0:
+        primaryOP[i] = 0
         primaryioerror = primaryioerror + primaryerror*delta_t
-        # primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
-        primaryP = Kc_1*primaryerror
-        primaryI = Kc_1/tauC_1*primaryioerror
-        # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
-        primaryOP[i] = primaryOP0 + primaryP + primaryI # + primaryD[i]
-
-        # Anti-reset windup protection
-        if primaryOP[i] > 40:
-            primaryOP[i] = 40
-            primaryioerror = primaryioerror - primaryerror*delta_t 
-        elif primaryOP[i] < 0:
-            primaryOP[i] = 0
-            primaryioerror = primaryioerror + primaryerror*delta_t
             
-        # Honeywell Regulatory Controller DCS. For this time, we'll just skip this.
+    # Honeywell Regulatory Controller DCS. For this time, we'll just skip this.
         
         """ I've got the master output which then send to the slave controller its setpoint
         The output ranges from 0 - 100 %, then i need to convert this value to appropriate
@@ -96,63 +89,59 @@ def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
         then this the setpoint would be primaryOP*(PVEUHI - PVEULO). This signal then send
         to slave controller"""
     
-        # PVEUHI = 35
-        # PVEULO = 0
-        # VariableSpan = PVEUHI - PVEULO
-        # secondarySP[i] = primaryOP[i]/100*VariableSpan
+    # PVEUHI = 35
+    # PVEULO = 0
+    # VariableSpan = PVEUHI - PVEULO
+    # secondarySP[i] = primaryOP[i]/100*VariableSpan
+    # Transfer from master controller to slave controller
+    secondarySP[i] = primaryOP[i]
+    secondaryerror = secondarySP[i] - secondaryPV[i]
+    # if i >= 1:
+    secondaryioerror = secondaryioerror + secondaryerror*delta_t
+    # secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
+    secondaryP = Kc_2*secondaryerror
+    secondaryI = Kc_2/tauC_2*secondaryioerror
+    # secondaryD[i] = Kc_2/tauD_2*secondarydpv[i]
+        
+    # secondaryOP[i] = secondaryOP0 + secondaryP + secondaryI + secondaryD
+        
+    secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI + secondaryD
+        
+    # Anti-reset windup protection
+    if secondaryOP[i] > 100:
+        secondaryOP[i] = 100
+        secondaryioerror[i] = secondaryioerror[i-1] - secondaryerror[i]*delta_t 
+    elif secondaryOP[i] < 0:
+        secondaryOP[i] = 0
+        secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
+        
+    # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
+    # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
+    # level[i+1] = h[-1]
 
-        # Transfer from master controller to slave controller
-        secondarySP[i] = primaryOP[i]
-        secondaryerror = secondarySP[i] - secondaryPV[i]
-        # if i >= 1:
-        secondaryioerror = secondaryioerror + secondaryerror*delta_t
-        # secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
-        secondaryP = Kc_2*secondaryerror
-        secondaryI = Kc_2/tauC_2*secondaryioerror
-        # secondaryD[i] = Kc_2/tauD_2*secondarydpv[i]
-        
-        # secondaryOP[i] = secondaryOP0 + secondaryP + secondaryI + secondaryD
-        
-        secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI + secondaryD
-        
-        # Anti-reset windup protection
-        if secondaryOP[i] > 100:
-            secondaryOP[i] = 100
-            secondaryioerror[i] = secondaryioerror[i-1] - secondaryerror[i]*delta_t 
-        elif secondaryOP[i] < 0:
-            secondaryOP[i] = 0
-            secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
-        
-        # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
-        # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
-        # level[i+1] = h[-1]
+    # system dynamic
+    h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
+    primaryPV[i+1] = h[-1]
 
-        # system dynamic
-        h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
-        primaryPV[i+1] = h[-1]
-    #-----------------------------------------------------------------------------------------------#
     
-    secondaryPV[num_index-1] = secondaryPV[num_index-2]
-
-"""
-plt.figure()
-plt.subplot(4,1,1)
-plt.plot(t,level,'b-',linewidth=3,label='level')
+plt.figure(1)
+plt.subplot(2,1,1)
+plt.plot(t,primaryPV,'b-',linewidth=3,label='level')
 plt.ylabel('Tank Level')
 plt.legend(loc='best')
-plt.subplot(4,1,2)
-plt.plot(t,op,'r--',linewidth=3,label='valve')
+plt.subplot(2,1,2)
+plt.plot(t,secondaryOP,'r--',linewidth=3,label='valve')
 plt.ylabel('Valve')    
 plt.legend(loc=1)
-plt.subplot(4,1,3)
-plt.plot(t,m_out,'b--',linewidth=3,label='Outlet Flow (kg/sec)')
+plt.figure(2)
+plt.subplot(2,1,2)
+plt.plot(t,secondaryPV,'b--',linewidth=3,label='Inlet Flow (kg/sec)')
 plt.plot(t,delP,'r:',linewidth=3,label='Inlet Pressure (bar)')
 plt.ylabel('Disturbances')    
 plt.legend(loc=1)
-plt.subplot(4,1,4)
-plt.plot(t,m_in,'k:',linewidth=3,label='Inlet Flow (kg/sec)')
+plt.subplot(2,1,2)
+plt.plot(t,FlowOut,'k:',linewidth=3,label='Outlet Flow (kg/sec)')
 plt.xlabel('Time (sec)')
 plt.legend(loc=1)
 
 plt.show()
-"""
