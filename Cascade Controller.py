@@ -53,13 +53,24 @@ def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
     Kc_2 = SecondaryTuning.Kc
     tauC_2 = SecondaryTuning.tauC
     tauD_2 = SecondaryTuning.tauD
+
+    # storage
+    secondaryPV = np.empty(num_index)
+    secondaryOP = np.empty(num_index)
+    secondaryOP[0] = 30
+
+    primaryOP = np.zeros(num_index)
+    delP = np.empty(num_index)
+    FlowOut = np.empty(num_index)
+    
+    
     
     for i in range(0,num_index-1):
         # primary/master controller
         # Apply disturbance to the system
-        
+        delP[i] = 12
+        FlowOut[i] = 2
         secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
-        
         primaryerror = primarySP - primaryPV
         # if i >= 1:
         primaryioerror = primaryioerror + primaryerror*delta_t
@@ -67,16 +78,15 @@ def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
         primaryP = Kc_1*primaryerror
         primaryI = Kc_1/tauC_1*primaryioerror
         # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
-        
         primaryOP[i] = primaryOP0 + primaryP + primaryI # + primaryD[i]
 
         # Anti-reset windup protection
-        if primaryOP[i] > 100:
-            primaryOP[i] = 100
+        if primaryOP[i] > 40:
+            primaryOP[i] = 40
             primaryioerror = primaryioerror - primaryerror*delta_t 
         elif primaryOP[i] < 0:
             primaryOP[i] = 0
-            primaryioerror[i] = primaryioerror[i-1] + primaryerror[i]*delta_t
+            primaryioerror = primaryioerror + primaryerror*delta_t
             
         # Honeywell Regulatory Controller DCS. For this time, we'll just skip this.
         
@@ -118,7 +128,7 @@ def CascadeController(PrimaryTuning, SecondaryTuning, Physical_Parameter):
         # level[i+1] = h[-1]
 
         # system dynamic
-        h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i],Physical_Parameter))
+        h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
         primaryPV[i+1] = h[-1]
     #-----------------------------------------------------------------------------------------------#
     
