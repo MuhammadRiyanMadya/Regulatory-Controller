@@ -11,9 +11,21 @@ import matplotlib.pyplot as plt
 
 # Cascade controller for level controller of a liquid tank
 
+class Physical_Parameter(object):
+    rho = 1000
+    Cv = 0.0001
+    sg = 1
+    A = 5
+    
+class PrimaryTuning(object):
+    Kc_1 = 6.25
+    tauC_1 = 60
+class SecondaryTuning(object):
+    Kc_2 = 1.5
+    tauC_2 = 1
 
 
-def LevelResponse(level,time,ValveLift,delP,FlowOut,Physical_Parameter):
+def LevelResponse(level,time,ValveLift,delP,FlowOut):
     
     """
     level : level of the liquid inside the tank
@@ -43,21 +55,31 @@ delta_t = t[1] - t[0]
 rho = Physical_Parameter.rho
 Cv = Physical_Parameter.Cv
 sg = Physical_Parameter.sg
-Kc_1 = PrimaryTuning.Kc
-tauC_1 = PrimaryTuning.tauC
-tauD_1 = PrimaryTuning.tauD
-Kc_2 = SecondaryTuning.Kc
-tauC_2 = SecondaryTuning.tauC
-tauD_2 = SecondaryTuning.tauD
+Kc_1 = PrimaryTuning.Kc_1
+tauC_1 = PrimaryTuning.tauC_1
+# tauD_1 = PrimaryTuning.tauD
+Kc_2 = SecondaryTuning.Kc_2
+tauC_2 = SecondaryTuning.tauC_2
+# tauD_2 = SecondaryTuning.tauD
 
 # storage
+primaryPV = np.empty(num_index)
+primaryPV[0] = 1
 secondaryPV = np.empty(num_index)
 secondaryOP = np.empty(num_index)
 secondaryOP[0] = 30
 
 primaryOP = np.zeros(num_index)
+primaryOP[0] = 2
 delP = np.empty(num_index)
 FlowOut = np.empty(num_index)
+
+# initial condition
+primarySP = 1
+primaryioerror = 0
+secondaryioerror = 0
+
+
     
 for i in range(0,num_index-1):
     # primary/master controller
@@ -65,21 +87,21 @@ for i in range(0,num_index-1):
     delP[i] = 12
     FlowOut[i] = 2
     secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
-    primaryerror = primarySP - primaryPV
+    primaryerror = primarySP - primaryPV[i]
     # if i >= 1:
     primaryioerror = primaryioerror + primaryerror*delta_t
     # primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
     primaryP = Kc_1*primaryerror
     primaryI = Kc_1/tauC_1*primaryioerror
     # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
-    primaryOP[i] = primaryOP0 + primaryP + primaryI # + primaryD[i]
+    primaryOP[i] = primaryOP[0] + primaryP + primaryI # + primaryD[i]
     # Anti-reset windup protection
     if primaryOP[i] > 40:
         primaryOP[i] = 40
         primaryioerror = primaryioerror - primaryerror*delta_t 
     elif primaryOP[i] < 0:
         primaryOP[i] = 0
-        primaryioerror = primaryioerror + primaryerror*delta_t
+        primaryioerror = primaryioerror - primaryerror*delta_t
             
     # Honeywell Regulatory Controller DCS. For this time, we'll just skip this.
         
@@ -94,8 +116,8 @@ for i in range(0,num_index-1):
     # VariableSpan = PVEUHI - PVEULO
     # secondarySP[i] = primaryOP[i]/100*VariableSpan
     # Transfer from master controller to slave controller
-    secondarySP[i] = primaryOP[i]
-    secondaryerror = secondarySP[i] - secondaryPV[i]
+    secondarySP = primaryOP[i]
+    secondaryerror = secondarySP - secondaryPV[i]
     # if i >= 1:
     secondaryioerror = secondaryioerror + secondaryerror*delta_t
     # secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
@@ -105,15 +127,15 @@ for i in range(0,num_index-1):
         
     # secondaryOP[i] = secondaryOP0 + secondaryP + secondaryI + secondaryD
         
-    secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI + secondaryD
+    secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI # + secondaryD
         
     # Anti-reset windup protection
     if secondaryOP[i] > 100:
         secondaryOP[i] = 100
-        secondaryioerror[i] = secondaryioerror[i-1] - secondaryerror[i]*delta_t 
+        secondaryioerror = secondaryioerror - secondaryerror*delta_t 
     elif secondaryOP[i] < 0:
         secondaryOP[i] = 0
-        secondaryioerror[i] = secondaryioerror[i-1] + secondaryerror[i]*delta_t
+        secondaryioerror = secondaryioerror - secondaryerror*delta_t
         
     # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
     # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
