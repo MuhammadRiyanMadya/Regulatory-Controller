@@ -9,7 +9,12 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-# Cascade controller for level controller of a liquid tank
+"""
+This module simulates cascade controller of a level control system of a tank. This controller employs cascade strategy to reject disturbance from inlet flow and outlet flow. Both of master controler and slave controller have PID parameter and anti-reset windup. This system could be used to simulate real world controller, 
+ultimately after fitted system response has been gained using earlier strategy in
+"System Response Identification Repository"
+"""
+
 
 class Physical_Parameter(object):
     rho = 1000
@@ -70,7 +75,7 @@ secondaryOP = np.empty(num_index)
 secondaryOP[0] = 30
 
 primaryOP = np.zeros(num_index)
-primaryOP[0] = 2
+primaryOP[0] = 10.3923
 delP = np.empty(num_index)
 FlowOut = np.empty(num_index)
 
@@ -89,7 +94,7 @@ for i in range(0,num_index-1):
     secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
     primaryerror = primarySP - primaryPV[i]
     # if i >= 1:
-    primaryioerror = primaryioerror + primaryerror*delta_t
+        primaryioerror = primaryioerror + primaryerror*delta_t
     # primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
     primaryP = Kc_1*primaryerror
     primaryI = Kc_1/tauC_1*primaryioerror
