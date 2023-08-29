@@ -10,18 +10,18 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 """
-This module simulates cascade controller of a level control system of a tank. This controller employs cascade strategy to reject disturbance from inlet flow and outlet flow. Both of master controler and slave controller have PID parameter and anti-reset windup. This system could be used to simulate real world controller, 
-ultimately after fitted system response has been gained using earlier strategy in
-"System Response Identification Repository"
+This module simulates cascade controller of a level control system of a tank. This controller employs cascade strategy to reject the 
+disturbances from inlet pressure as well as demand fluctuation from outlet flow. Both of master controler and slave controller have 
+PID parameter and anti-reset windup protection. This system could be used to simulate real world controller and was created to be similar
+to honeywell TDC 300 regulatory controller.
 """
 
 
-class Physical_Parameter(object):
+class PhysicalParameter(object):
     rho = 1000
     Cv = 0.0001
     sg = 1
     A = 5
-    
 class PrimaryTuning(object):
     Kc_1 = 6.25
     tauC_1 = 60
@@ -33,11 +33,11 @@ class SecondaryTuning(object):
 def LevelResponse(level,time,ValveLift,delP,FlowOut):
     
     """
-    level : level of the liquid inside the tank
-    time : time, hour
-    ValveLift : Percent opening of inlet valve, 0 - 100 %
-    delP : pressure difference in the input flow as disturbance variation
-    FlowOut : As disturbance also but for this case, it's constant
+    level         : level of the liquid inside the tank
+    time          : time, hour
+    ValveLift     : Percent opening of inlet valve, 0 - 100 %
+    delP          : pressure difference in the input flow as disturbance variation
+    FlowOut       : As disturbance also but for this case, it's constant
     """
     rho = Physical_Parameter.rho
     Cv = Physical_Parameter.Cv
@@ -46,17 +46,19 @@ def LevelResponse(level,time,ValveLift,delP,FlowOut):
     
     FlowIn = rho*Cv*ValveLift*np.sqrt(delP/sg)
     FlowLeak = 5*level
+    
     if level <0:
         dleveldt = 0
     else:
         dleveldt = (FlowIn - FlowOut - FlowLeak)/rho/A
     return dleveldt
 
-#-------------------------------------Controller Engine----------------------------------------#
-# time basis
+# Time basis
 num_index = 3001
 t = np.linspace(0,num_index-1,num_index)
 delta_t = t[1] - t[0]
+
+# Import constants
 rho = Physical_Parameter.rho
 Cv = Physical_Parameter.Cv
 sg = Physical_Parameter.sg
@@ -67,13 +69,12 @@ Kc_2 = SecondaryTuning.Kc_2
 tauC_2 = SecondaryTuning.tauC_2
 # tauD_2 = SecondaryTuning.tauD
 
-# storage
+# storage array
 primaryPV = np.empty(num_index)
 primaryPV[0] = 1
 secondaryPV = np.empty(num_index)
 secondaryOP = np.empty(num_index)
 secondaryOP[0] = 30
-
 primaryOP = np.zeros(num_index)
 primaryOP[0] = 10.3923
 delP = np.empty(num_index)
@@ -87,11 +88,12 @@ secondaryioerror = 0
 
     
 for i in range(0,num_index-1):
-    # primary/master controller
-    # Apply disturbance to the system
+    # Generate disturbances from inlet noise and outlet fluctuation demand
+    
     delP[i] = 12
     FlowOut[i] = 2
     secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
+    
     primaryerror = primarySP - primaryPV[i]
     # if i >= 1:
         primaryioerror = primaryioerror + primaryerror*delta_t
@@ -150,7 +152,7 @@ for i in range(0,num_index-1):
     h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
     primaryPV[i+1] = h[-1]
 
-    
+# Visualization  
 plt.figure(1)
 plt.subplot(2,1,1)
 plt.plot(t,primaryPV,'b-',linewidth=3,label='level')
