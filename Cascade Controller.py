@@ -28,8 +28,6 @@ class PrimaryTuning(object):
 class SecondaryTuning(object):
     Kc_2 = 1.5
     tauC_2 = 1
-
-
 def LevelResponse(level,time,ValveLift,delP,FlowOut):
     
     """
@@ -88,16 +86,23 @@ secondaryioerror = 0
 
     
 for i in range(0,num_index-1):
-    # Generate disturbances from inlet noise and outlet fluctuation demand
     
-    delP[i] = 12
-    FlowOut[i] = 2
+    # Generate disturbances
+    noise = np.random.normal(0,1,num_index)
+    delP[i] = 12 + np.sin(t/noise)
+    stepseq = 0 + i*10
+    if stepseq < num_index:
+        if stepseq/10 % 2 != 0:
+            FlowOut[stepseq:] = 4
+        else: 
+            FlowOut[stepseq:] = 1.5
     secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
-    
+
+    # start the controller
     primaryerror = primarySP - primaryPV[i]
-    # if i >= 1:
+    if i >= 1:
         primaryioerror = primaryioerror + primaryerror*delta_t
-    # primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
+        primarydpv = (primaryPV - primaryPV[i-1])/delta_t
     primaryP = Kc_1*primaryerror
     primaryI = Kc_1/tauC_1*primaryioerror
     # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
