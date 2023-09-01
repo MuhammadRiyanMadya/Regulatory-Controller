@@ -17,7 +17,7 @@ to honeywell TDC 300 regulatory controller.
 """
 
 
-class PhysicalParameter(object):
+class Physical_Parameter(object):
     rho = 1000
     Cv = 0.0001
     sg = 1
@@ -25,9 +25,11 @@ class PhysicalParameter(object):
 class PrimaryTuning(object):
     Kc_1 = 6.25
     tauC_1 = 60
+    tauD_1 = 0
 class SecondaryTuning(object):
     Kc_2 = 1.5
     tauC_2 = 1
+    tauD_2 = 0
 def LevelResponse(level,time,ValveLift,delP,FlowOut):
     
     """
@@ -60,12 +62,14 @@ delta_t = t[1] - t[0]
 rho = Physical_Parameter.rho
 Cv = Physical_Parameter.Cv
 sg = Physical_Parameter.sg
+# tauD_1 = PrimaryTuning.tauD
 Kc_1 = PrimaryTuning.Kc_1
 tauC_1 = PrimaryTuning.tauC_1
-# tauD_1 = PrimaryTuning.tauD
+tauD_1 = PrimaryTuning.tauD_1
+# tauD_2 = SecondaryTuning.tauD
 Kc_2 = SecondaryTuning.Kc_2
 tauC_2 = SecondaryTuning.tauC_2
-# tauD_2 = SecondaryTuning.tauD
+tauD_2 = SecondaryTuning.tauD_2
 
 # storage array
 primaryPV = np.empty(num_index)
@@ -74,9 +78,21 @@ secondaryPV = np.empty(num_index)
 secondaryOP = np.empty(num_index)
 secondaryOP[0] = 30
 primaryOP = np.zeros(num_index)
-primaryOP[0] = 10.3923
+primaryOP[0] = 10.3923 
 delP = np.empty(num_index)
 FlowOut = np.empty(num_index)
+FlowOut[0:] = 2
+
+# derivative storage
+primarydpv = np.empty(num_index)
+primarydpv[0] = 0
+primaryD = np.zeros(num_index)
+secondarydpv = np.empty(num_index)
+secondarydpv[0] = 0
+secondaryD = np.zeros(num_index)
+
+#disturbances storage
+noise = np.empty(num_index)
 
 # initial condition
 primarySP = 1
@@ -87,26 +103,28 @@ secondaryioerror = 0
     
 for i in range(0,num_index-1):
     
-    # Generate disturbances
-    noise = np.random.normal(0,1,num_index)
-    delP[i] = 12 + np.sin(t/noise)
-    stepseq = 0 + i*10
+    # generate disturbances
+    # noise[0:] = np.random.normal(0,1,num_index)
+    # if i < num_index-1:
+    delP[i] = 12 + np.sin(t[i]/100)
+    stepseq = 0 + i*400
     if stepseq < num_index:
-        if stepseq/10 % 2 != 0:
-            FlowOut[stepseq:] = 4
+        if stepseq/400 % 2 != 0:
+            FlowOut[stepseq:] = 3
         else: 
-            FlowOut[stepseq:] = 1.5
+            FlowOut[stepseq:] = 2.7
     secondaryPV[i] = rho*Cv*secondaryOP[i]*np.sqrt(delP[i]/sg)
 
     # start the controller
     primaryerror = primarySP - primaryPV[i]
-    if i >= 1:
+    if i > 1: 
         primaryioerror = primaryioerror + primaryerror*delta_t
-        primarydpv = (primaryPV - primaryPV[i-1])/delta_t
+        primarydpv[i] = (primaryPV[i] - primaryPV[i-1])/delta_t
     primaryP = Kc_1*primaryerror
     primaryI = Kc_1/tauC_1*primaryioerror
-    # primaryD[i] = Kc_1/tauD_1*primarydpv[i]
-    primaryOP[i] = primaryOP[0] + primaryP + primaryI # + primaryD[i]
+    primaryD[i] = Kc_1*tauD_1*primarydpv[i]
+    primaryOP[i] = primaryOP[0] + primaryP + primaryI + primaryD[i]
+    
     # Anti-reset windup protection
     if primaryOP[i] > 40:
         primaryOP[i] = 40
@@ -128,18 +146,19 @@ for i in range(0,num_index-1):
     # VariableSpan = PVEUHI - PVEULO
     # secondarySP[i] = primaryOP[i]/100*VariableSpan
     # Transfer from master controller to slave controller
+    
     secondarySP = primaryOP[i]
     secondaryerror = secondarySP - secondaryPV[i]
-    # if i >= 1:
-    secondaryioerror = secondaryioerror + secondaryerror*delta_t
-    # secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
+    if i > 1: 
+        secondaryioerror = secondaryioerror + secondaryerror*delta_t
+        secondarydpv[i] = (secondaryPV[i] - secondaryPV[i-1])/delta_t
     secondaryP = Kc_2*secondaryerror
     secondaryI = Kc_2/tauC_2*secondaryioerror
-    # secondaryD[i] = Kc_2/tauD_2*secondarydpv[i]
-        
-    # secondaryOP[i] = secondaryOP0 + secondaryP + secondaryI + secondaryD
-        
-    secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI # + secondaryD
+    secondaryD[i] = Kc_2*tauD_2*secondarydpv[i]
+    secondaryOP[i+1] = secondaryOP[i] + secondaryP + secondaryI + secondaryD[i]
+    
+    # Alternative ways (without storage)
+    # secondaryOP[i] = secondaryOP0 + secondaryP + secondaryI + secondaryD 
         
     # Anti-reset windup protection
     if secondaryOP[i] > 100:
@@ -149,33 +168,44 @@ for i in range(0,num_index-1):
         secondaryOP[i] = 0
         secondaryioerror = secondaryioerror - secondaryerror*delta_t
         
+    # old script
     # m_in[i] = rho*Cv*op[i]*np.sqrt(delP[i]/sg)
     # h = odeint(LevelResponse,level[i],[0,delta_t],args=(op[i],delP[i],m_out[i]))
     # level[i+1] = h[-1]
 
     # system dynamic
-    h = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
-    primaryPV[i+1] = h[-1]
+    level = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
+    primaryPV[i+1] = level[-1]
+
+# Normalize end value
+secondaryPV[num_index-1] = secondaryPV[num_index-2]
+delP[num_index-1] = delP[num_index-2]
 
 # Visualization  
 plt.figure(1)
 plt.subplot(2,1,1)
-plt.plot(t,primaryPV,'b-',linewidth=3,label='level')
-plt.ylabel('Tank Level')
+plt.plot(t,primaryPV,'b-',linewidth=3,label='PV: level')
+plt.axhline(y = 1,color = 'r',linestyle = '--',linewidth=2, label = 'SP: level')
+plt.ylabel('Tank Level, meter')
 plt.legend(loc='best')
 plt.subplot(2,1,2)
-plt.plot(t,secondaryOP,'r--',linewidth=3,label='valve')
-plt.ylabel('Valve')    
+plt.plot(t,secondaryOP,'r--',linewidth=3,label='OP: valve')
+plt.ylabel('Valve, %')    
 plt.legend(loc=1)
 plt.figure(2)
-plt.subplot(2,1,2)
-plt.plot(t,secondaryPV,'b--',linewidth=3,label='Inlet Flow (kg/sec)')
-plt.plot(t,delP,'r:',linewidth=3,label='Inlet Pressure (bar)')
-plt.ylabel('Disturbances')    
+plt.subplot(2,1,1)
+plt.plot(t,delP,'r:',linewidth=3,label='Inlet Pressure (bar)')  
+plt.ylabel('Pressure Noise, bar')
 plt.legend(loc=1)
 plt.subplot(2,1,2)
+plt.plot(t,secondaryPV,'b--',linewidth=3,label='Inlet Flow (kg/sec)')
+plt.ylabel('Inlet Fluctuation, m^3/h')   
+plt.legend(loc=1)
+plt.figure(3) 
+plt.subplot(2,1,1)
 plt.plot(t,FlowOut,'k:',linewidth=3,label='Outlet Flow (kg/sec)')
 plt.xlabel('Time (sec)')
+plt.ylabel('Deman Fluctuation, m^3/h')
 plt.legend(loc=1)
 
 plt.show()
