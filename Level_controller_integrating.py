@@ -47,13 +47,14 @@ def level_controller():
 
 plt.figure(1)
 plt.subplot(2,1,1)
-plt.plot(t,PV,'b',linewidth=3,label='level(t)')
+plt.plot(t,PV,'b',linewidth=2,label='level(t)')
+plt.plot(t,SP,'k--',linewidth=2,label='SP level(t)')
 plt.xlabel('time')
 plt.ylabel('level, m')
 plt.legend()
 
 plt.subplot(2,1,2)
-plt.plot(t,OP,'m',linewidth=3,label='% Valve(t)')
+plt.plot(t,OP,'m',linewidth=2,label='% Valve(t)')
 plt.xlabel('time')
 plt.ylabel('Valve, %')
 plt.legend()
