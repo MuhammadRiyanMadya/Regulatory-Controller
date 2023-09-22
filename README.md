@@ -9,7 +9,7 @@ of how the most conventinal controller works.
 <img src="https://github.com/MuhammadRiyanMadya/Regulatory_Controller/blob/main/responseselfdrive.png">
 </p>
 
-## System's Response Identification - Modelling
+## System Identification - Extracting an Accurate Process Gain, Process Time, and Dead Time.
 
 ### First Principle
 <!-- ![alt text]()-->
