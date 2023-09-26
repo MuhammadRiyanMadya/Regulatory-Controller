@@ -87,7 +87,6 @@ def calc_response(t,mode,xm,xc):
         op[100:] = 2
         
     for i in range(0,num_index):
-        # PID engine
         error[i] = sp[i] - pv[i]
         if i >= 1:
             dpv[i] = (pv[i] - pv[i-1])/delta_t
@@ -95,10 +94,8 @@ def calc_response(t,mode,xm,xc):
         P[i] = Kc*error[i]
         I[i] = Kc/tauI*ioe[i]
         D[i] = -Kc*tauD*dpv[i]
-        # Apply PID engine output onlye when mode is auto
         if mode == 1:
             op[i] = op[0] + P[i] + I[i] + D[i]
-        # Equip auto mode with anti-reset windup to prevent error accumulation
         if op[i] > 100:
             op[i] = op_hi
             ioe[i] = ioe[i-1] - error[i]*delta_t
@@ -121,7 +118,7 @@ def calc_response(t,mode,xm,xc):
         ndelay = int(np.ceil(thetap/delta_t))
         iop = max(0,i-ndelay)
         y = odeint(process,pv[i],[0,delta_t],args=(op[iop],Kp,taup))
-        pv[i+1] = y[-1]
+        pv[i+1] = y[1,0]
     error[num_index] = error[num_index-1] 
     ioe[num_index] = ioe[num_index-1]
     dpv[num_index] = dpv[num_index-1]
@@ -170,3 +167,4 @@ plt.plot(t,op,'r',linewidth=2, label='OP')
 plt.xlabel('Time')
 plt.ylabel('Response')
 plt.legend()
+plt.show()
