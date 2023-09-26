@@ -175,7 +175,7 @@ for i in range(0,num_index-1):
 
     # system dynamic
     level = odeint(LevelResponse,primaryPV[i],[0,delta_t],args=(secondaryOP[i],delP[i],FlowOut[i]))
-    primaryPV[i+1] = level[-1]
+    primaryPV[i+1] = level[1,0]
 
 # Normalize end value
 secondaryPV[num_index-1] = secondaryPV[num_index-2]
