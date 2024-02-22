@@ -3,16 +3,20 @@
 <p align="justify">
 This repository is a collection of process control codes based on first principles.
   
-## Proportional only controller.
+## P-only controller
 <p align="center">
 <img src="https://github.com/MuhammadRiyanMadya/Regulatory-Controller/blob/main/png/p_only.png">
 </p>
 <p align="justify">
+The proportional controller can be excellent for integrating process but when there are setpoint changes it will not follow the setpoint.
   
-## Cascde - Disturbance and Dead-Time Influence.
+## PI controller
 <p align="center">
-<img src="https://github.com/MuhammadRiyanMadya/Regulatory_Controller/blob/main/responseselfdrive.png">
+<img src="https://github.com/MuhammadRiyanMadya/Regulatory-Controller/blob/main/png/PI_Controller_1.png">
+<img src="https://github.com/MuhammadRiyanMadya/Regulatory-Controller/blob/main/png/PI_controller_2.png">
 </p>
+<p align="justify">
+The Proportional-Integral are commonly used in industry, it is reliable due to the ability to follow the setpoint
 
 
 
